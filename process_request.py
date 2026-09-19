@@ -1,7 +1,17 @@
 from pathlib import Path
+import zipfile
+import tempfile
+
 
 downloads = Path.home() / "Downloads"
-files = list(downloads.iterdir())
+
+
+
+def extract_zip(zip_path, extracted_folder):
+    with zipfile.ZipFile(zip_path, "r") as zip_file:
+        zip_file.extractall(extracted_folder)
+
+    return extracted_folder
 
 categories = {
     "images": [".png", ".jpg", ".jpeg"],
@@ -13,16 +23,11 @@ categories = {
 
 
 def classify_file(filename):
-      extension = Path(filename).suffix.lower()
-      if extension in categories["images"]:
-        return "images"
-      if extension in categories["documents"]:
-        return "documents"
-      if extension in categories["code"]:
-        return "code"
-      else:
-           return "other"
-      
+      file_extension = Path(filename).suffix.lower()
+      for category, extensions in categories.items():
+           if file_extension in extensions:
+            return category
+      return "other"
 def process_request(request):
     if not isinstance(request, dict):
         return {"status": "error", "message": "request must be a dictionary"}
@@ -37,11 +42,8 @@ def process_request(request):
     if not isinstance(include_unknown, bool):
          return {"status": "error", "message": "include_unknown must be a boolean"}         
     
-    groups = {
-        "images": [],
-        "documents": [],
-        "code": [],
-        "other": []}
+    groups = {category: [] for category in categories}
+    groups["other"] = []
     for filename in files:
         category = classify_file(filename)
         
@@ -56,23 +58,46 @@ def process_request(request):
     "groups": groups}
 
 
-def organize_folder():
+def get_safe_destination(folder, file):
+    destination = folder / file.name
+    counter = 1
+    while destination.exists():
+        new_name = f"{file.stem}_{counter}{file.suffix}"
+        destination = folder / new_name
+        counter += 1
+    else:
+        return destination
     
 
-    for file in files:
-        for category, extension in categories.items():
-            if file.suffix.lower()  in extension:
-                    folder = downloads / category
-                    folder.mkdir(exist_ok=True)
-                    destination = folder / file.name
-                    if destination.exists():
-                          new_name = file.stem + "_1" + file.suffix
-                          destination = folder / new_name
-                    file.rename(destination)
-                    break
-        else:
-                folder = downloads / "other"
-                folder.mkdir(exist_ok=True)
-                destination = folder / file.name
-                file.rename(destination)
-      
+def organize_folder(folder_path):
+        files = list(folder_path.iterdir())
+        for file in files:
+            category = classify_file(file)
+            folder = folder_path / category
+            folder.mkdir(exist_ok=True)
+            destination = get_safe_destination(folder, file)
+            file.rename(destination)
+        
+
+            
+def create_zip(folder_path, output_path):
+    with zipfile.ZipFile(output_path, "w") as zip_file:
+        for file in folder_path.rglob("*"):
+            if file.is_file():
+                zip_file.write(file, file.relative_to(folder_path))
+        return output_path
+def organize_zip(zip_path, output_path):
+    with tempfile.TemporaryDirectory() as temp_dir:
+        extracted = Path(temp_dir) / "extracted"
+        extracted_folder = extract_zip(zip_path, extracted)
+        organize_folder(extracted_folder)
+        
+        organized_files =create_zip(extracted_folder, output_path)
+        return organized_files
+
+result = organize_zip(
+    Path("test.zip"),
+    Path("organized.zip")
+)
+
+print(result)
