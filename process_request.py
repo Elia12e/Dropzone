@@ -1,6 +1,8 @@
 from pathlib import Path
 import zipfile
 import tempfile
+import csv
+import pandas as pd
 
 
 downloads = Path.home() / "Downloads"
@@ -78,8 +80,29 @@ def organize_folder(folder_path):
             destination = get_safe_destination(folder, file)
             file.rename(destination)
         
+def log_files(folder_path, log_path):
+    with open(log_path, 'w', newline="") as csvfile:
+        logwriter = csv.writer(csvfile)
 
-            
+        logwriter.writerow(["filename", "extension", "category"])
+        for file in folder_path.rglob("*"):
+            if file.is_file():
+                category = classify_file(file)
+                logwriter.writerow([file.name, file.suffix.lower(), category])
+
+def analyze_log(log_path):           
+    df = pd.read_csv(log_path)
+    
+    total_files = len(df)
+    category_counts = df["category"].value_counts().to_dict()
+    extension_counts = df["extension"].value_counts().to_dict()
+    longest_category = df["category"].value_counts().index[0]
+    
+    return {"total_files": total_files,
+            "category_counts": category_counts,
+            "extension_counts": extension_counts,
+            "most_common_category": longest_category}
+       
 def create_zip(folder_path, output_path):
     with zipfile.ZipFile(output_path, "w") as zip_file:
         for file in folder_path.rglob("*"):
@@ -90,10 +113,14 @@ def organize_zip(zip_path, output_path):
     with tempfile.TemporaryDirectory() as temp_dir:
         extracted = Path(temp_dir) / "extracted"
         extracted_folder = extract_zip(zip_path, extracted)
-        organize_folder(extracted_folder)
-        
+        organize_folder(extracted_folder,)
+        log_path = extracted_folder / "dropzone_log.csv"
+        log_files(extracted_folder, log_path)
+        analyze_log(log_path)
         organized_files =create_zip(extracted_folder, output_path)
         return organized_files
+    
+    
 
 result = organize_zip(
     Path("test.zip"),
