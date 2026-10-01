@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale1=">
+    <title>     Dropzone </title>
+</head>
+
+<body>
+  <main>
+    <h1> Dropzone</h1> 
+
+    <p class="tagline">Cleaning your Workspace with minimal effort.</p>
+    <p class="description">Drop some files to get an organized ZIP back</p>
+    <form class="upload_area"
+      id="upload_form"
+      action="/organize"
+      method="post"
+      enctype="multipart/form-data">
+
+      <input id="file-input" type="file" name="file" accept=".zip" required>
+      <button  class="organize-button" 
+      type="submit">Organize files</button>
+    </form>
+    <section class="results">
+    <h2>Results</h2>
+    <p id="status"></p>
+    </section>
+
+  </main>
+</body>
+</html>
